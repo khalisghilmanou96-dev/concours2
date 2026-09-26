@@ -7,7 +7,6 @@ import { snapshot, transaction } from './store.js'
 
 const app = express()
 
-
 const port = Number(process.env.PORT || 4242)
 const maxTickets = Number(process.env.MAX_TICKETS || 500)
 const priceEur = Number(process.env.TICKET_PRICE_EUR || 10)
@@ -23,6 +22,9 @@ const stripe = stripeKey
   : null
 
 
+// -----------------------------------------------------
+// Utilitaires
+// -----------------------------------------------------
 
 function clean(value, max = 180) {
   return String(value || '')
@@ -35,6 +37,10 @@ function validEmail(value) {
 }
 
 
+// -----------------------------------------------------
+// Webhook Stripe
+// IMPORTANT : doit rester AVANT express.json()
+// -----------------------------------------------------
 
 app.post(
   '/api/stripe/webhook',
@@ -78,7 +84,7 @@ app.post(
 
         try {
           await transaction(async (db) => {
-            
+            // Évite de traiter deux fois le même événement Stripe
             if (db.processedEvents[event.id]) {
               return
             }
@@ -86,7 +92,7 @@ app.post(
             db.processedEvents[event.id] =
               new Date().toISOString()
 
-            
+            // Participation déjà enregistrée
             if (db.participations[session.id]) {
               return
             }
@@ -100,7 +106,7 @@ app.post(
               return
             }
 
-          
+            // Vérification du montant payé
             const expectedAmount =
               Math.round(priceEur * 100)
 
@@ -114,7 +120,7 @@ app.post(
               return
             }
 
-           
+            // Vérification de la limite
             const validatedCount =
               Object.keys(db.participations).length
 
@@ -127,7 +133,7 @@ app.post(
 
             const paidAt = new Date().toISOString()
 
-         
+            // Validation de la participation
             db.participations[session.id] = {
               ...pending,
               paidAt,
@@ -135,10 +141,10 @@ app.post(
                 session.payment_intent || null
             }
 
-          
+            // Suppression de la participation en attente
             delete db.pending[session.id]
 
-            
+            // Données envoyées à Formspree
             formspreePayload = {
               ...pending,
               paidAt,
@@ -158,7 +164,9 @@ app.post(
             .json({ error: 'Erreur serveur' })
         }
 
-       
+        // -------------------------------------------------
+        // Envoi Formspree après paiement validé
+        // -------------------------------------------------
 
         if (
           formspreePayload &&
@@ -207,6 +215,9 @@ app.post(
 )
 
 
+// -----------------------------------------------------
+// JSON middleware
+// -----------------------------------------------------
 
 app.use(
   express.json({
@@ -215,6 +226,9 @@ app.use(
 )
 
 
+// -----------------------------------------------------
+// Compteur des participations validées
+// -----------------------------------------------------
 
 app.get(
   '/api/participations/status',
@@ -247,6 +261,7 @@ app.get(
     }
   }
 )
+
 
 // -----------------------------------------------------
 // Création Stripe Checkout
@@ -306,9 +321,20 @@ app.post(
         })
       }
 
+      // -------------------------------------------------
+      // Création de la session Stripe
+      // -------------------------------------------------
+
       const session =
         await stripe.checkout.sessions.create({
           mode: 'payment',
+
+          // Désactive Managed Payments pour cette session.
+          // Cela évite l'obligation d'un tax_code produit
+          // qui provoquait l'erreur Stripe 400.
+          managed_payments: {
+            enabled: false
+          },
 
           customer_email: email,
 
@@ -345,7 +371,10 @@ app.post(
           }
         })
 
-     
+      // -------------------------------------------------
+      // Enregistrement temporaire avant paiement
+      // -------------------------------------------------
+
       await transaction(async (data) => {
         data.pending[session.id] = {
           firstName,
@@ -374,6 +403,10 @@ app.post(
   }
 )
 
+
+// -----------------------------------------------------
+// Vérification du paiement
+// -----------------------------------------------------
 
 app.get(
   '/api/payment-status',
@@ -419,6 +452,9 @@ app.get(
 )
 
 
+// -----------------------------------------------------
+// Frontend Vue en production
+// -----------------------------------------------------
 
 if (process.env.NODE_ENV === 'production') {
   const root = path.resolve(
@@ -431,9 +467,8 @@ if (process.env.NODE_ENV === 'production') {
 
   app.use(express.static(root))
 
- 
   app.use((req, res, next) => {
-   
+    // Ne pas renvoyer index.html pour les routes API
     if (req.path.startsWith('/api/')) {
       return next()
     }
@@ -449,6 +484,9 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 
+// -----------------------------------------------------
+// API 404
+// -----------------------------------------------------
 
 app.use('/api', (_req, res) => {
   return res.status(404).json({
@@ -457,10 +495,25 @@ app.use('/api', (_req, res) => {
 })
 
 
+// -----------------------------------------------------
+// Démarrage serveur
+// -----------------------------------------------------
 
 app.listen(port, '0.0.0.0', () => {
   console.log(
     `Serveur démarré sur le port ${port}`
+  )
+
+  console.log(
+    `Prix participation : ${priceEur} EUR`
+  )
+
+  console.log(
+    `Maximum participations : ${maxTickets}`
+  )
+
+  console.log(
+    `APP_URL : ${appUrl}`
   )
 
   if (!stripeKey) {
