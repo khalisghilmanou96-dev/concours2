@@ -89,7 +89,7 @@ onMounted(async () => { await refreshProgress(); await checkPaymentReturn() })
     <section class="progress-section wrap" aria-label="Progression des participations validées">
       <div class="progress-head"><strong>{{ loading ? 'Actualisation…' : `${validated} / ${MAX_PARTICIPATIONS} participations validées` }}</strong><span>{{ percent }} %</span></div>
       <div class="track"><div class="fill" :style="{width: percent + '%'}"></div></div>
-      <p>{{ remaining }} participations encore disponibles. Le compteur est alimenté uniquement par les paiements confirmés par Stripe.</p>
+      <p>{{ remaining }} participations encore disponibles. N'hésite pas à participez pour tenter de remporter t'es billet d'avion aller-retour direction Dubai.</p>
     </section>
 
     <section id="participer" class="entry wrap">
@@ -105,23 +105,23 @@ onMounted(async () => { await refreshProgress(); await checkPaymentReturn() })
         <label class="check"><input required type="checkbox"> <span>J'accepte le règlement du jeu et la politique de confidentialité.</span></label>
         <button class="btn full" type="submit" :disabled="checkoutLoading || remaining === 0">{{ checkoutLoading ? 'REDIRECTION VERS STRIPE…' : remaining === 0 ? 'COMPLET' : 'PAYER 10 € AVEC STRIPE' }}</button>
         <p v-if="checkoutError" class="form-error">{{ checkoutError }}</p>
-        <small>Paiement sécurisé • 1 participation par paiement • Formspree reçoit les coordonnées uniquement après confirmation Stripe</small>
+        <small>Paiement sécurisé • 1 participation par paiement • plusieurs participation par personne autorisé.</small>
       </form>
     </section>
 
     <section class="partner wrap">
       <div class="eyebrow">PARTENAIRE / ORGANISATEUR</div>
       <img :src="partnerLogo" alt="Logo Dubai Rental Car" class="partner-logo" />
-      <p>Dubai Rental Car accompagne l'opération. Les informations légales définitives de l'organisateur, du lot et du règlement seront à compléter avant mise en production.</p>
+      <p>Dubai Rental Car accompagne l'opération. Service de location de voitures sur Dubai toute les coordonnées de contact son renseignés ci-dessous.</p>
       <img :src="partnerShowcase" alt="Présentation Dubai Rental Car, véhicules et services" class="partner-showcase" />
     </section>
 
     <section class="how wrap">
       <div><b>01</b><h3>Remplis le formulaire</h3><p>Coordonnées nécessaires à ta participation.</p></div>
       <div><b>02</b><h3>Paie via Stripe</h3><p>La participation coûte 10 €.</p></div>
-      <div><b>03</b><h3>Validation automatique</h3><p>Le webhook Stripe confirme le paiement et incrémente le compteur.</p></div>
+      <div><b>03</b><h3>Validation automatique</h3><p>Une fois le tirage au sort effectué le gagnant sera contacter par nos équipes.</p></div>
     </section>
 
-    <footer>Concours Dubaï • Tirage au sort prévu le 31 décembre 2026 • Mentions légales et règlement à finaliser avant publication.</footer>
+    <footer>Concours Dubaï • Tirage au sort prévu le 31 décembre 2026 • Mentions légales et règlement disponible sur demande.</footer>
   </main>
 </template>
